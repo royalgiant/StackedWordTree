@@ -8,7 +8,7 @@ class WordTreeProcessorController < ApplicationController
 		else 
 			file = params[:file].read
 			# Split up the string based on the \n break and assign the array to dataRows, sort by length, and remove duplicates
-			word_array = file.split(/\r?\n/).group_by(&:length).sort
+			word_array = file.split(/\r?\n/).group_by(&:length).sort.reverse
 			stacked_word_tree = iterate(word_array[0], word_array, 0, [])
 			raise stacked_word_tree.inspect
 		end
