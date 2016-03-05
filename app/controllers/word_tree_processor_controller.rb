@@ -69,7 +69,7 @@ class WordTreeProcessorController < ApplicationController
 					recursion(word_array[group_index+1], word_array, group_index+1, [], cache)
 				end
 			else # The word_tree is empty, push a word onto it and recurse on the next group
-				if cache[group_index] != true
+				if cache[group_index] != true # We've not started on this group before, so start it.
 					group_array[1].each do |word|
 						word_tree.push(word)
 						recursion(word_array[group_index+1], word_array, group_index+1, word_tree, cache)
