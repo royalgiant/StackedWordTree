@@ -9,49 +9,72 @@ class WordTreeProcessorController < ApplicationController
 			file = params[:file].read
 			# Split up the string based on the \n break and assign the array to dataRows, sort by length, and remove duplicates
 			word_array = file.split(/\r?\n/).group_by(&:length).sort.reverse
-			stacked_word_tree = iterate(word_array[0], word_array, 0, [])
+			
+			a = Time.now 
+			stacked_word_tree = recursion(word_array[0], word_array, 0, [], [])
+			puts (Time.now - a).inspect
+			# iterate(word_array)
+			# raise 'ph'
 			raise stacked_word_tree.inspect
 		end
 		render :new
 	end
 
-	def iterate(group_array, word_array, group_index, word_tree)
+	def reduce_dup(word_array)
+		word_array.each do |group|
+			group[1].each do |word|
+
+			end
+		end
+	end
+
+	def iterate(word_array)
+		word_lengths = []
+		word_tree = []
+		# raise word_array.inspect
+		word_array.each do |word_group|
+			word_lengths << word_group[0]
+		end
+		a = (word_lengths[0]..word_lengths.max).to_a
+		b = word_lengths
+		raise (a - b).inspect
+	end
+
+	def recursion(group_array, word_array, group_index, word_tree, cache)
 		# If length == 2, we have reached the start (i.e. 3 letter word)
 		
 		if group_array[0] == 2
 			return word_tree
-		elsif group_array.blank? # If the group array is blank, go to the next group; word_tree restarts
-			return iterate(word_array[group_index+1], word_array, group_index+1, [])
 		else
 			# word_tree is not empty, make comparisons between each word and the last word of the
 			# previous group in the word_tree to check that the former is a subset of the latter.
 			if !word_tree.empty?
-				wt = word_tree.last.split(//)
-				puts 'wt'
-				puts wt.inspect
+				wt = word_tree.last.chars
+				word_found_flag = false # If a word was found to fit in the current word_tree
 				group_array[1].each do |word|
-					puts 'word'
-					puts word.split(//).inspect
-					puts "equal?"
-					puts ( word.split(//) - wt ).empty?.inspect
-					if ( word.split(//) - wt ).blank?
+					if ( word.chars - wt ).blank?
 						# puts 'make it in here if'
 						word_tree.push(word)
-						puts 'word_tree'
-						puts word_tree.inspect
-						return iterate(word_array[group_index+1], word_array, group_index+1, word_tree)
+						word_found_flag = true
+						break
 					end	
 				end
-				# There were no matches with respect to the last word, restart the word_tree
-				return iterate(word_array[group_index+1], word_array, group_index+1, [])
+				puts word_tree.inspect
+				puts ""
+				if word_found_flag
+					recursion(word_array[group_index+1], word_array, group_index+1, word_tree, cache)
+				else
+					cache[group_index+1] = true
+					# There were no matches with respect to the last group, restart the word_tree
+					recursion(word_array[group_index+1], word_array, group_index+1, [], cache)
+				end
 			else # The word_tree is empty, push a word onto it and recurse on the next group
-				group_array[1].each do |word|
-					puts 'make it in here else'
-					word_tree.push(word)
-					puts 'word_tree'
-					puts word_tree.inspect
-					return iterate(word_array[group_index+1], word_array, group_index+1, word_tree)
-				end 
+				if cache[group_index] != true
+					group_array[1].each do |word|
+						word_tree.push(word)
+						recursion(word_array[group_index+1], word_array, group_index+1, word_tree, cache)
+					end 
+				end
 			end
 		end
 	end
