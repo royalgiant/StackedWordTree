@@ -1,3 +1,4 @@
+require 'array'
 class WordTreeProcessorController < ApplicationController
 	def new
 	end
@@ -7,75 +8,50 @@ class WordTreeProcessorController < ApplicationController
 			flash[:danger] = "You need to select a file first."
 		else 
 			file = params[:file].read
-			# Split up the string based on the \n break and assign the array to dataRows, sort by length, and remove duplicates
-			word_array = file.split(/\r?\n/).group_by(&:length).sort.reverse
-			
-			a = Time.now 
-			stacked_word_tree = recursion(word_array[0], word_array, 0, [], [])
-			puts (Time.now - a).inspect
-			# iterate(word_array)
-			# raise 'ph'
-			raise stacked_word_tree.inspect
+			# Split up the string based on the \n break
+			word_array = file.split(/\r?\n/)
+			# Make an array of arrays grouped by length
+			words_by_length = make_length_buckets(word_array)
+
+			# Loop through each group of words
+			tree = words_by_length.reverse.eval_find do |words|
+				# For each word 
+			  	Array(words).eval_find do |word|
+			    	get_chain(word, words_by_length)
+			  	end
+			end
+			raise tree.inspect
 		end
 		render :new
 	end
-
-	def reduce_dup(word_array)
-		word_array.each do |group|
-			group[1].each do |word|
-
-			end
+	
+	def make_length_buckets(words)
+		# Loop through each word with a []
+		words.each.with_object([]) do |w, o|
+		    o[w.length] ||= []  # if o[key] does not exist, make it
+		    o[w.length] << w # throw the word into o[key]
 		end
 	end
 
-	def iterate(word_array)
-		word_lengths = []
-		word_tree = []
-		# raise word_array.inspect
-		word_array.each do |word_group|
-			word_lengths << word_group[0]
-		end
-		a = (word_lengths[0]..word_lengths.max).to_a
-		b = word_lengths
-		raise (a - b).inspect
+	def get_chain(word, words_by_length) 
+	  r_get_chain(word, words_by_length, 0, []) # start the recursive function 
 	end
 
-	def recursion(group_array, word_array, group_index, word_tree, cache)
-		# If length == 2, we have reached the start (i.e. 3 letter word)
-		
-		if group_array[0] == 2
-			return word_tree
-		else
-			# word_tree is not empty, make comparisons between each word and the last word of the
-			# previous group in the word_tree to check that the former is a subset of the latter.
-			if !word_tree.empty?
-				wt = word_tree.last.chars
-				word_found_flag = false # If a word was found to fit in the current word_tree
-				group_array[1].each do |word|
-					if ( word.chars - wt ).blank?
-						# puts 'make it in here if'
-						word_tree.push(word)
-						word_found_flag = true
-						break
-					end	
-				end
-				puts word_tree.inspect
-				puts ""
-				if word_found_flag
-					recursion(word_array[group_index+1], word_array, group_index+1, word_tree, cache)
-				else
-					cache[group_index+1] = true
-					# There were no matches with respect to the last group, restart the word_tree
-					recursion(word_array[group_index+1], word_array, group_index+1, [], cache)
-				end
-			else # The word_tree is empty, push a word onto it and recurse on the next group
-				if cache[group_index] != true # We've not started on this group before, so start it.
-					group_array[1].each do |word|
-						word_tree.push(word)
-						recursion(word_array[group_index+1], word_array, group_index+1, word_tree, cache)
-					end 
-				end
-			end
+	def r_get_chain(word, words_by_length, index, chain)
+	  chain[index] = word # each incremental word is one letter less. Assign word to hash
+	  return chain[0..index] if word.length == 3 # return the chain hash if we made it to the end
+	  # Get next set of words
+	  next_words = get_next_words(word, words_by_length[word.length.pred]) 
+	  # Recurse through the new words from next_words array and repeat until one makes it to word_length == 3  
+	  next_words.eval_find do |next_word|
+	    r_get_chain(next_word, words_by_length, index + 1, chain)
+	  end
+	end
+
+	def get_next_words(root, words)
+		# Select the WORDS which has every character in the superset
+		Array(words).select do |word|
+		    (word.chars - root.chars).empty?
 		end
 	end
 end
